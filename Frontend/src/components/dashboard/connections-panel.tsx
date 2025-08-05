@@ -20,8 +20,8 @@ export default function ConnectionsPanel() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedConnection, setSelectedConnection] = useState<DatabaseConnection | null>(null);
   const [formData, setFormData] = useState<ConnectionCreate>({
-    name: '',
-    database_type: 'postgresql',
+    name: 'PostgreSQL Connection', // Default name
+    database_type: 'postgresql', // Fixed to PostgreSQL
     host: '',
     port: 5432,
     database_name: '',
@@ -34,18 +34,18 @@ export default function ConnectionsPanel() {
   // Fetch connections
   const { data: connections, isLoading, error } = useQuery({
     queryKey: ['connections'],
-    queryFn: apiClient.getConnections,
+    queryFn: () => apiClient.getConnections(),
   });
 
   // Create connection mutation
   const createMutation = useMutation({
-    mutationFn: apiClient.createConnection,
+    mutationFn: (data: ConnectionCreate) => apiClient.createConnection(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['connections'] });
       setIsCreateDialogOpen(false);
       setFormData({
-        name: '',
-        database_type: 'postgresql',
+        name: 'PostgreSQL Connection', // Default name
+        database_type: 'postgresql', // Fixed to PostgreSQL
         host: '',
         port: 5432,
         database_name: '',
@@ -90,7 +90,7 @@ export default function ConnectionsPanel() {
 
   // Delete connection mutation
   const deleteMutation = useMutation({
-    mutationFn: apiClient.deleteConnection,
+    mutationFn: (connectionId: string) => apiClient.deleteConnection(connectionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['connections'] });
       toast({
@@ -109,7 +109,7 @@ export default function ConnectionsPanel() {
 
   // Test connection mutation
   const testMutation = useMutation({
-    mutationFn: apiClient.testConnection,
+    mutationFn: (connectionId: string) => apiClient.testConnection(connectionId),
     onSuccess: (data) => {
       if (data.success) {
         toast({
@@ -201,43 +201,13 @@ export default function ConnectionsPanel() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Add Database Connection</DialogTitle>
+              <DialogTitle>Add PostgreSQL Connection</DialogTitle>
               <DialogDescription>
-                Add a new database connection to your account.
+                Add a new PostgreSQL database connection to your account.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateConnection}>
               <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">
-                    Name
-                  </Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="database_type" className="text-right">
-                    Type
-                  </Label>
-                  <Select
-                    value={formData.database_type}
-                    onValueChange={(value) => setFormData({ ...formData, database_type: value })}
-                  >
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="postgresql">PostgreSQL</SelectItem>
-                      <SelectItem value="mysql">MySQL</SelectItem>
-                      <SelectItem value="sqlite">SQLite</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="host" className="text-right">
                     Host

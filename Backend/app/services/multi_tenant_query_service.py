@@ -94,7 +94,9 @@ class MultiTenantQueryService:
                 """)
                 
                 result = conn.execute(schema_query)
-                return [dict(row) for row in result.fetchall()]
+                columns = result.keys()
+                rows = result.fetchall()
+                return [dict(zip(columns, row)) for row in rows]
                 
         except Exception as e:
             print(f"Error getting schema: {e}")

@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     # Database Configuration
     DATABASE_URL: str = Field(default="postgresql://postgres:root@localhost:5432/datawiser_platform")
     DATABASE_URL_ASYNC: str = Field(default="postgresql+asyncpg://postgres:root@localhost:5432/datawiser_platform")
+    POSTGRES_PASSWORD: str = Field(default="root")
     
     # MongoDB Configuration
     MONGODB_URL: str = Field(default="mongodb://localhost:27017")
@@ -43,7 +44,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_WINDOW: int = Field(default=3600)  # 1 hour in seconds
     
     class Config:
-        env_file = str(Path(__file__).parent.parent / ".env")
+        env_file = ".env"
         case_sensitive = True
 
 

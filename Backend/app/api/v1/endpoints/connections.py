@@ -265,7 +265,7 @@ def get_database_schema(
         
         return SchemaResponse(
             connection_id=connection_id,
-            schema=schema,
+            schema_data=schema,
             success=True
         )
         

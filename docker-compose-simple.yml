@@ -26,8 +26,6 @@ services:
       # Database URLs for container networking
       - DATABASE_URL=postgresql://postgres:root@postgres:5432/datawiser_platform
       - DATABASE_URL_ASYNC=postgresql+asyncpg://postgres:root@postgres:5432/datawiser_platform
-      # Other environment variables will be loaded from .env file
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
     ports:
       - "8000:8000"
     depends_on:
@@ -43,7 +41,7 @@ services:
     build: ./Frontend
     container_name: datadashboard_frontend
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
     ports:
       - "9002:9002"
     depends_on:

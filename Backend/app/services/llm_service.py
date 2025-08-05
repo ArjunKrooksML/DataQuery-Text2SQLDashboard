@@ -1,6 +1,8 @@
 import time
 import json
 import uuid
+from datetime import datetime, date
+from decimal import Decimal
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from openai import OpenAI
@@ -9,6 +11,16 @@ from app.models.query_history import QueryHistory, QueryType
 from app.schemas.query import LLMQueryResponse
 from app.services.database_service import DatabaseService
 from app.services.multi_tenant_query_service import MultiTenantQueryService
+
+
+class DataEncoder(json.JSONEncoder):
+    """Custom JSON encoder to handle datetime, date, and Decimal objects"""
+    def default(self, obj):
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        elif isinstance(obj, Decimal):
+            return float(obj)
+        return super().default(obj)
 
 
 class LLMService:
@@ -67,8 +79,8 @@ class LLMService:
             return None
             
         try:
-            schema_info = json.dumps(context["schema"], indent=2)
-            sample_data = json.dumps(context["sample_data"], indent=2)
+            schema_info = json.dumps(context["schema"], indent=2, cls=DataEncoder)
+            sample_data = json.dumps(context["sample_data"], indent=2, cls=DataEncoder)
             
             sql_generation_prompt = f"""
             You are a SQL expert. Based on the following database schema and sample data, 
@@ -145,7 +157,7 @@ class LLMService:
             execution_time = int((time.time() - start_time) * 1000)
             
             # Log the query
-            self._log_query(prompt, execution_time, user_id, connection_id)
+            self._log_query(prompt, execution_time, user_id, connection_id, sql_generated)
             
             return LLMQueryResponse(
                 response=ai_response,
@@ -158,7 +170,7 @@ class LLMService:
             execution_time = int((time.time() - start_time) * 1000)
             
             # Log the failed query
-            self._log_query(prompt, execution_time, user_id, connection_id, str(e))
+            self._log_query(prompt, execution_time, user_id, connection_id, None, str(e))
             
             return LLMQueryResponse(
                 response=f"I apologize, but I encountered an error: {str(e)}",
@@ -167,8 +179,8 @@ class LLMService:
     
     def _create_enhanced_prompt(self, prompt: str, context: Dict[str, Any], sql_generated: Optional[str]) -> str:
         """Create enhanced prompt with database context"""
-        schema_info = json.dumps(context["schema"], indent=2)
-        sample_data = json.dumps(context["sample_data"], indent=2)
+        schema_info = json.dumps(context["schema"], indent=2, cls=DataEncoder)
+        sample_data = json.dumps(context["sample_data"], indent=2, cls=DataEncoder)
         
         enhanced_prompt = f"""
         You are an AI assistant with access to a database. Answer the user's question based on the available data.
@@ -191,7 +203,7 @@ class LLMService:
         return enhanced_prompt
     
     def _log_query(self, prompt: str, execution_time: int, user_id: uuid.UUID, connection_id: uuid.UUID,
-                   error_message: Optional[str] = None):
+                   sql_generated: Optional[str] = None, error_message: Optional[str] = None):
         """Log LLM query execution"""
         try:
             log_entry = QueryHistory(
@@ -199,11 +211,10 @@ class LLMService:
                 user_id=user_id,
                 database_connection_id=connection_id,
                 natural_language_query=prompt,
-                generated_sql_query=None,  # Will be set if SQL is generated
+                generated_sql_query=sql_generated if sql_generated else "",
                 execution_time_ms=execution_time,
                 status="success" if not error_message else "error",
-                error_message=error_message,
-                query_type=QueryType.LLM
+                error_message=error_message
             )
             self.db.add(log_entry)
             self.db.commit()
