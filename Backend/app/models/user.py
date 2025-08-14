@@ -19,12 +19,11 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
-    # Relationships
+
     database_connections = relationship("DatabaseConnection", back_populates="user")
     query_history = relationship("QueryHistory", back_populates="user")
     user_sessions = relationship("UserSession", back_populates="user")
     
     @property
     def id_str(self) -> str:
-        """Convert UUID to string for serialization"""
         return str(self.id) if self.id else None 

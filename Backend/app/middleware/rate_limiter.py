@@ -6,15 +6,16 @@ import time
 from typing import Optional
 from fastapi import Request, HTTPException, status
 from fastapi.responses import JSONResponse
-from app.database.mongodb import rate_limit_store
+from app.services.mongodb_service import mongodb_service
 from app.core.config import settings
+from app.utils.jwt_utils import get_rate_limit_identifier, get_user_info_from_request
 
 
 class RateLimiter:
     """Rate limiting middleware"""
     
     def __init__(self):
-        self.rate_limit_store = rate_limit_store
+        self.mongodb_service = mongodb_service
     
     def get_window_start(self, window_seconds: int = None) -> int:
         """Get the start of the current time window"""
@@ -24,40 +25,22 @@ class RateLimiter:
         current_time = int(time.time())
         return (current_time // window_seconds) * window_seconds
     
-    async def check_rate_limit(self, user_id: str, window_seconds: int = None) -> bool:
+    def check_rate_limit(self, user_id: str, endpoint: str) -> bool:
         """Check if user has exceeded rate limit"""
         try:
-            window_start = self.get_window_start(window_seconds)
-            current_count = await self.rate_limit_store.get_request_count(user_id, window_start)
-            
-            return current_count < settings.RATE_LIMIT_REQUESTS
+            return self.mongodb_service.check_rate_limit(user_id, endpoint)
             
         except Exception as e:
             print(f"Error checking rate limit: {e}")
             return True  # Allow request if rate limiting fails
     
-    async def increment_request_count(self, user_id: str, window_seconds: int = None) -> int:
-        """Increment request count for user"""
+    def record_request(self, user_id: str, endpoint: str) -> None:
+        """Record a request for rate limiting"""
         try:
-            window_start = self.get_window_start(window_seconds)
-            current_count = await self.rate_limit_store.increment_request_count(user_id, window_start)
-            
-            return current_count
+            self.mongodb_service.record_request(user_id, endpoint)
             
         except Exception as e:
-            print(f"Error incrementing request count: {e}")
-            return 0
-    
-    async def cleanup_old_windows(self, window_seconds: int = None) -> int:
-        """Clean up old rate limit windows"""
-        try:
-            current_window = self.get_window_start(window_seconds)
-            count = await self.rate_limit_store.cleanup_old_windows(current_window)
-            return count
-            
-        except Exception as e:
-            print(f"Error cleaning up rate limit windows: {e}")
-            return 0
+            print(f"Error recording request: {e}")
 
 
 # Global rate limiter instance
@@ -72,53 +55,56 @@ async def rate_limit_middleware(request: Request, call_next):
         response = await call_next(request)
         return response
     
-    # Get user ID from request (assuming it's in headers or query params)
-    user_id = None
+    # Get unique identifier for rate limiting (user ID or IP)
+    rate_limit_id = get_rate_limit_identifier(request)
     
-    # Try to get user ID from authorization header
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        # In a real implementation, you would decode the JWT token here
-        # For now, we'll use a simple approach
-        user_id = "user_from_token"  # This should be extracted from JWT
+    # Get user info for better logging and headers
+    user_info = get_user_info_from_request(request)
     
-    # If no user ID found, use IP address as fallback
-    if not user_id:
-        user_id = request.client.host
+    # Get endpoint for rate limiting
+    endpoint = request.url.path
     
-    # Check rate limit
-    is_allowed = await rate_limiter.check_rate_limit(user_id)
+    # Check rate limit and get status
+    rate_status = rate_limiter.mongodb_service.get_rate_limit_status(rate_limit_id, endpoint)
     
-    if not is_allowed:
+    if not rate_status["allowed"]:
         return JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             content={
                 "detail": "Rate limit exceeded. Please try again later.",
-                "retry_after": settings.RATE_LIMIT_WINDOW
+                "retry_after": settings.RATE_LIMIT_WINDOW,
+                "current_count": rate_status["current_count"],
+                "limit": rate_status["limit"],
+                "remaining": rate_status["remaining"],
+                "reset_time": rate_status["reset_time"]
+            },
+            headers={
+                "X-RateLimit-Limit": str(rate_status["limit"]),
+                "X-RateLimit-Remaining": str(rate_status["remaining"]),
+                "X-RateLimit-Reset": rate_status["reset_time"],
+                "Retry-After": str(settings.RATE_LIMIT_WINDOW)
             }
         )
     
-    # Increment request count
-    current_count = await rate_limiter.increment_request_count(user_id)
+    # Record request
+    rate_limiter.record_request(rate_limit_id, endpoint)
     
     # Add rate limit headers to response
     response = await call_next(request)
     
-    response.headers["X-RateLimit-Limit"] = str(settings.RATE_LIMIT_REQUESTS)
-    response.headers["X-RateLimit-Remaining"] = str(settings.RATE_LIMIT_REQUESTS - current_count)
-    response.headers["X-RateLimit-Reset"] = str(int(time.time()) + settings.RATE_LIMIT_WINDOW)
+    # Add comprehensive rate limit headers
+    response.headers["X-RateLimit-Limit"] = str(rate_status["limit"])
+    response.headers["X-RateLimit-Remaining"] = str(rate_status["remaining"])
+    response.headers["X-RateLimit-Window"] = str(settings.RATE_LIMIT_WINDOW)
+    response.headers["X-RateLimit-Reset"] = rate_status["reset_time"]
+    
+    # Add user identification in headers (for debugging)
+    if user_info["authenticated"]:
+        response.headers["X-RateLimit-User"] = f"user:{user_info['user_id']}"
+    else:
+        response.headers["X-RateLimit-User"] = rate_limit_id
     
     return response
 
 
-def get_user_id_from_request(request: Request) -> Optional[str]:
-    """Extract user ID from request"""
-    # This is a simplified version - in production, you'd decode JWT tokens
-    auth_header = request.headers.get("Authorization")
-    
-    if auth_header and auth_header.startswith("Bearer "):
-        # In a real implementation, decode JWT and extract user_id
-        # For now, return a placeholder
-        return "user_from_token"
-    
-    return None 
+ 

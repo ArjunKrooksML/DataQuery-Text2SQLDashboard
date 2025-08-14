@@ -22,7 +22,7 @@ def execute_sql_query(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_active_user)
 ):
-    """Execute SQL query on a specific client database"""
+
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
     
@@ -42,7 +42,7 @@ def execute_llm_query(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_active_user)
 ):
-    """Execute LLM query with database context"""
+
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
     
@@ -57,11 +57,62 @@ def get_query_logs(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_active_user)
 ):
-    """Get query logs"""
+
     query_service = MultiTenantQueryService(db)
     user_id = current_user.id if current_user else None
     
-    return query_service.get_query_logs(limit, user_id)
+    logs = query_service.get_query_logs(limit, user_id)
+    
+
+    return [
+        QueryLogResponse(
+            id=log["id"],
+            query_type=log["query_type"],
+            query_text=log["query_text"],
+            status=log["status"],
+            execution_time_ms=log["execution_time_ms"],
+            created_at=log["created_at"],
+            user_id=log["user_id"]
+        )
+        for log in logs
+    ]
+
+
+@router.delete("/logs")
+def delete_query_history(
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_active_user)
+):
+    """Delete all query history for the current user"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    query_service = MultiTenantQueryService(db)
+    deleted_count = query_service.delete_query_history(current_user.id)
+    
+    return {
+        "message": f"Successfully deleted {deleted_count} query history records",
+        "deleted_count": deleted_count
+    }
+
+
+@router.delete("/logs/{log_id}")
+def delete_single_query_log(
+    log_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_active_user)
+):
+    """Delete a specific query log entry"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    query_service = MultiTenantQueryService(db)
+    success = query_service.delete_single_query_log(log_id, current_user.id)
+    
+    if not success:
+        raise HTTPException(status_code=404, detail="Query log not found or access denied")
+    
+    return {"message": "Query log deleted successfully"}
 
 
 @router.get("/schema")
@@ -70,7 +121,7 @@ def get_database_schema(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_active_user)
 ):
-    """Get database schema from a specific client database"""
+
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
     
@@ -86,7 +137,7 @@ def get_sample_data(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_active_user)
 ):
-    """Get sample data from a specific client database table"""
+
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
     

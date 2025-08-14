@@ -5,7 +5,7 @@ import Overview from '@/components/dashboard/overview';
 import SqlQueryPanel from '@/components/dashboard/sql-query-panel';
 import LlmQueryPanel from '@/components/dashboard/llm-query-panel';
 import ChartsPanel from '@/components/dashboard/charts-panel';
-import LogsPanel from '@/components/dashboard/logs-panel';
+
 import ConnectionsPanel from '@/components/dashboard/connections-panel';
 
 export default function DashboardPage() {

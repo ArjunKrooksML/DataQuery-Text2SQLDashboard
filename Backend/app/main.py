@@ -5,42 +5,30 @@ import os
 
 from app.api.v1.api import api_router
 from app.core.config import settings
-
-# Optional imports for MongoDB and Redis
-try:
-    from app.database.mongodb import mongodb_manager
-    from app.middleware.rate_limiter import rate_limit_middleware
-    MONGODB_AVAILABLE = True
-except ImportError:
-    MONGODB_AVAILABLE = False
-    print("⚠️  MongoDB not available - session storage and caching disabled")
+from app.services.mongodb_service import mongodb_service
+from app.middleware.rate_limiter import rate_limit_middleware
+from app.middleware.latency_monitor import latency_monitor_middleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    print("🚀 Starting DataWise API...")
+    print(" Starting DataWise API...")
     
-    # Connect to MongoDB if available
-    if MONGODB_AVAILABLE and settings.MONGODB_URL:
-        try:
-            await mongodb_manager.connect()
-            print("✅ Connected to MongoDB")
-        except Exception as e:
-            print(f"⚠️  MongoDB connection failed: {e}")
-            print("   Continuing without MongoDB features...")
+    # Check MongoDB availability
+    if mongodb_service.is_available():
+        print(" MongoDB connected successfully")
+        print(" Session storage and caching enabled")
+        print(" Rate limiting enabled")
+        print(" Latency monitoring enabled")
+    else:
+        print("WARNING:  MongoDB not available - session storage and caching disabled")
+        print("WARNING:  Rate limiting disabled (MongoDB not available)")
+        print("WARNING:  Latency monitoring disabled (MongoDB not available)")
     
     yield
     
     # Shutdown
-    print("🛑 Shutting down DataWise API...")
-    
-    # Disconnect from MongoDB if available
-    if MONGODB_AVAILABLE:
-        try:
-            await mongodb_manager.disconnect()
-            print("✅ Disconnected from MongoDB")
-        except Exception as e:
-            print(f"⚠️  MongoDB disconnect error: {e}")
+    print(" Shutting down DataWise API...")
 
 # Create FastAPI app
 app = FastAPI(
@@ -59,12 +47,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add latency monitoring middleware (first, to capture all requests)
+if mongodb_service.is_available():
+    app.middleware("http")(latency_monitor_middleware)
+    print(" Latency monitoring enabled")
+
 # Add rate limiting middleware if MongoDB is available
-if MONGODB_AVAILABLE and settings.MONGODB_URL:
+if mongodb_service.is_available():
     app.middleware("http")(rate_limit_middleware)
-    print("✅ Rate limiting enabled")
+    print(" Rate limiting enabled")
 else:
-    print("⚠️  Rate limiting disabled (MongoDB not available)")
+    print("WARNING:  Rate limiting disabled (MongoDB not available)")
 
 # Include API router
 app.include_router(api_router, prefix="/api/v1")
@@ -75,11 +68,23 @@ async def root():
         "message": "DataWise API is running!",
         "version": "1.0.0",
         "features": {
-            "mongodb": MONGODB_AVAILABLE and bool(settings.MONGODB_URL),
-            "rate_limiting": MONGODB_AVAILABLE and bool(settings.MONGODB_URL)
+            "mongodb": mongodb_service.is_available(),
+            "rate_limiting": mongodb_service.is_available(),
+            "session_storage": mongodb_service.is_available(),
+            "query_caching": mongodb_service.is_available(),
+            "latency_monitoring": mongodb_service.is_available()
         }
     }
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "mongodb": MONGODB_AVAILABLE and bool(settings.MONGODB_URL)} 
+    return {
+        "status": "healthy", 
+        "mongodb": mongodb_service.is_available(),
+        "services": {
+            "sessions": mongodb_service.is_available(),
+            "caching": mongodb_service.is_available(),
+            "rate_limiting": mongodb_service.is_available(),
+            "latency_monitoring": mongodb_service.is_available()
+        }
+    } 

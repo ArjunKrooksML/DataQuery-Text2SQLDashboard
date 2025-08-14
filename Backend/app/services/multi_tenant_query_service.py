@@ -146,6 +146,7 @@ class MultiTenantQueryService:
                 id=uuid.uuid4(),
                 user_id=user_id,
                 database_connection_id=connection_id,
+                query_type=QueryType.SQL,  # Explicitly set as SQL query
                 natural_language_query=None,  # For SQL queries
                 generated_sql_query=query,
                 execution_time_ms=execution_time,
@@ -159,4 +160,67 @@ class MultiTenantQueryService:
             
         except Exception as e:
             print(f"Error logging query: {e}")
-            self.db.rollback() 
+            self.db.rollback()
+    
+    def get_query_logs(self, limit: int = 50, user_id: Optional[uuid.UUID] = None) -> List[Dict[str, Any]]:
+        """Get query logs with optional filtering by user"""
+        try:
+            query = self.db.query(QueryHistory)
+            
+            if user_id:
+                query = query.filter(QueryHistory.user_id == user_id)
+            
+            logs = query.order_by(QueryHistory.created_at.desc()).limit(limit).all()
+            
+            # Convert to frontend-expected format
+            return [
+                {
+                    "id": str(log.id),
+                    "query_type": log.query_type.value if log.query_type else "sql",
+                    "query_text": log.natural_language_query if log.query_type == QueryType.LLM else log.generated_sql_query,
+                    "status": log.status,
+                    "execution_time_ms": log.execution_time_ms,
+                    "created_at": log.created_at,
+                    "user_id": str(log.user_id) if log.user_id else None
+                }
+                for log in logs
+            ]
+            
+        except Exception as e:
+            print(f"Error getting query logs: {e}")
+            return []
+    
+    def delete_query_history(self, user_id: uuid.UUID) -> int:
+        """Delete all query history for a specific user"""
+        try:
+            # Count how many records will be deleted
+            count = self.db.query(QueryHistory).filter(QueryHistory.user_id == user_id).count()
+            
+            # Delete all query history for the user
+            self.db.query(QueryHistory).filter(QueryHistory.user_id == user_id).delete()
+            self.db.commit()
+            
+            return count
+            
+        except Exception as e:
+            print(f"Error deleting query history: {e}")
+            self.db.rollback()
+            return 0
+    
+    def delete_single_query_log(self, log_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        """Delete a specific query log entry for a user"""
+        try:
+            # Find and delete the specific log entry (ensuring it belongs to the user)
+            deleted_count = self.db.query(QueryHistory).filter(
+                QueryHistory.id == log_id,
+                QueryHistory.user_id == user_id
+            ).delete()
+            
+            self.db.commit()
+            
+            return deleted_count > 0
+            
+        except Exception as e:
+            print(f"Error deleting single query log: {e}")
+            self.db.rollback()
+            return False 

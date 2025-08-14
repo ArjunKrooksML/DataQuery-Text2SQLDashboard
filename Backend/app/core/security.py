@@ -31,8 +31,37 @@ def verify_token(token: str):
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         username: str = payload.get("sub")
         user_id: str = payload.get("user_id")
+        session_id: str = payload.get("session_id")
+        
         if username is None:
             return None
-        return {"username": username, "user_id": user_id}
+            
+        # Return complete payload for MongoDB session management
+        return {
+            "sub": username,
+            "user_id": user_id,
+            "session_id": session_id,
+            "username": username  # Keep for backward compatibility
+        }
     except JWTError:
-        return None 
+        return None
+
+
+def extract_user_id_from_token(token: str) -> Optional[str]:
+    """Extract user ID from JWT token without full validation"""
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        return payload.get("user_id")
+    except JWTError:
+        return None
+
+
+def extract_token_from_auth_header(auth_header: str) -> Optional[str]:
+    """Extract JWT token from Authorization header"""
+    if not auth_header:
+        return None
+    
+    if auth_header.startswith("Bearer "):
+        return auth_header[7:]  # Remove "Bearer " prefix
+    
+    return None 

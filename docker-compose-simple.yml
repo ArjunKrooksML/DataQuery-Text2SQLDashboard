@@ -16,6 +16,22 @@ services:
     networks:
       - datadashboard_network
 
+  # MongoDB Database (Sessions, Cache, Logs)
+  mongodb:
+    image: mongo:latest
+    container_name: datadashboard_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: datawiser_sessions
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./Backend/scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - datadashboard_network
+
   # FastAPI Backend (Simplified)
   backend:
     build: ./Backend
@@ -26,10 +42,13 @@ services:
       # Database URLs for container networking
       - DATABASE_URL=postgresql://postgres:root@postgres:5432/datawiser_platform
       - DATABASE_URL_ASYNC=postgresql+asyncpg://postgres:root@postgres:5432/datawiser_platform
+      # MongoDB connection
+      - MONGODB_URL=mongodb://admin:admin123@mongodb:27017/datawiser_sessions?authSource=admin
     ports:
       - "8000:8000"
     depends_on:
       - postgres
+      - mongodb
     volumes:
       - ./Backend:/app
     networks:
@@ -55,6 +74,7 @@ services:
 
 volumes:
   postgres_data:
+  mongodb_data:
 
 networks:
   datadashboard_network:

@@ -29,7 +29,7 @@ class LLMService:
         self.database_service = DatabaseService(db)
         self.multi_tenant_service = MultiTenantQueryService(db)
         
-        # Initialize OpenAI client only if API key is provided
+
         if settings.OPENAI_API_KEY and settings.OPENAI_API_KEY != "":
             self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
         else:
@@ -44,11 +44,11 @@ class LLMService:
         }
         
         try:
-            # Get database schema from client database
+    
             schema = self.multi_tenant_service.get_database_schema(user_id, connection_id)
             context["schema"] = schema
             
-            # Analyze prompt to find relevant tables
+
             prompt_lower = prompt.lower()
             relevant_tables = set()
             
@@ -56,13 +56,13 @@ class LLMService:
                 table_name = table_info["table_name"].lower()
                 column_name = table_info["column_name"].lower()
                 
-                # Check if table or column names appear in the prompt
+
                 if table_name in prompt_lower or column_name in prompt_lower:
                     relevant_tables.add(table_info["table_name"])
             
             context["relevant_tables"] = list(relevant_tables)
             
-            # Get sample data for relevant tables from client database
+
             for table_name in relevant_tables:
                 sample_data = self.multi_tenant_service.get_sample_data(user_id, connection_id, table_name, limit=3)
                 if sample_data:
@@ -109,7 +109,7 @@ class LLMService:
             
             sql_query = response.choices[0].message.content.strip()
             
-            # Basic validation - ensure it starts with SELECT
+
             if sql_query and sql_query.upper().startswith("SELECT"):
                 return sql_query
             return None
@@ -123,7 +123,7 @@ class LLMService:
         start_time = time.time()
         
         try:
-            # Check if OpenAI client is available
+
             if not self.client:
                 execution_time = int((time.time() - start_time) * 1000)
                 self._log_query(prompt, execution_time, user_id, connection_id, "OpenAI API key not configured")
@@ -132,16 +132,16 @@ class LLMService:
                     execution_time_ms=execution_time
                 )
             
-            # Get database context from client database
+
             context = self.get_database_context(prompt, user_id, connection_id)
             
-            # Generate SQL if possible
+
             sql_generated = self.generate_sql_from_prompt(prompt, context)
             
-            # Create enhanced prompt with context
+
             enhanced_prompt = self._create_enhanced_prompt(prompt, context, sql_generated)
             
-            # Get AI response
+
             response = self.client.chat.completions.create(
                 model="gpt-4",
                 messages=[
@@ -155,21 +155,23 @@ class LLMService:
             ai_response = response.choices[0].message.content
             
             execution_time = int((time.time() - start_time) * 1000)
+            confidence = 0.85  # Mock confidence score
             
-            # Log the query
-            self._log_query(prompt, execution_time, user_id, connection_id, sql_generated)
+            # Log the query with response
+            self._log_query(prompt, execution_time, user_id, connection_id, sql_generated,
+                          llm_response=ai_response, confidence_score=confidence)
             
             return LLMQueryResponse(
                 response=ai_response,
                 sql_generated=sql_generated,
-                confidence_score=0.85,  # Mock confidence score
+                confidence_score=confidence,
                 execution_time_ms=execution_time
             )
             
         except Exception as e:
             execution_time = int((time.time() - start_time) * 1000)
             
-            # Log the failed query
+
             self._log_query(prompt, execution_time, user_id, connection_id, None, str(e))
             
             return LLMQueryResponse(
@@ -203,15 +205,19 @@ class LLMService:
         return enhanced_prompt
     
     def _log_query(self, prompt: str, execution_time: int, user_id: uuid.UUID, connection_id: uuid.UUID,
-                   sql_generated: Optional[str] = None, error_message: Optional[str] = None):
+                   sql_generated: Optional[str] = None, error_message: Optional[str] = None, 
+                   llm_response: Optional[str] = None, confidence_score: Optional[float] = None):
         """Log LLM query execution"""
         try:
             log_entry = QueryHistory(
                 id=uuid.uuid4(),
                 user_id=user_id,
                 database_connection_id=connection_id,
+                query_type=QueryType.LLM,  # Explicitly set as LLM query
                 natural_language_query=prompt,
-                generated_sql_query=sql_generated if sql_generated else "",
+                generated_sql_query=sql_generated,
+                llm_response=llm_response,
+                confidence_score=int(confidence_score * 100) if confidence_score else None,
                 execution_time_ms=execution_time,
                 status="success" if not error_message else "error",
                 error_message=error_message
@@ -221,4 +227,4 @@ class LLMService:
         except Exception as e:
             print(f"Error logging LLM query: {e}")
             self.db.rollback()
-        pass 
+ 

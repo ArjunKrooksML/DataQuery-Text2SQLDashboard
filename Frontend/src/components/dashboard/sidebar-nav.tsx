@@ -14,8 +14,7 @@ const navItems: { view: View; label: string; icon: React.ElementType }[] = [
   { view: 'overview', label: 'Overview', icon: Home },
   { view: 'llm', label: 'LLM Prompt', icon: BrainCircuit },
   { view: 'sql', label: 'SQL Query', icon: Database },
-  { view: 'charts', label: 'Visualizations', icon: BarChart2 },
-  { view: 'logs', label: 'Logs', icon: FileText },
+  { view: 'charts', label: 'Analytics', icon: BarChart2 },
   { view: 'connections', label: 'Connections', icon: Settings },
 ];
 

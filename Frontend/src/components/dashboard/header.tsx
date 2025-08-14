@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { SidebarTrigger } from "../ui/sidebar"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { LogOut, User } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 
@@ -25,7 +26,9 @@ export default function Header() {
       <div className="flex-1">
         <h1 className="text-lg font-semibold md:text-2xl">DataWise Dashboard</h1>
       </div>
-      <DropdownMenu>
+      <div className="flex items-center gap-2">
+        <ThemeToggle />
+        <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-10 w-10 rounded-full">
             <Avatar className="h-10 w-10">
@@ -54,7 +57,8 @@ export default function Header() {
             <span>Log out</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
-      </DropdownMenu>
+        </DropdownMenu>
+      </div>
     </header>
   )
 }

@@ -13,20 +13,20 @@ class DatabaseConnection(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name = Column(String(255), nullable=False)
-    database_type = Column(String(50), nullable=False)  # postgresql, mysql, sqlite, etc.
+    database_type = Column(String(50), nullable=False)
     host = Column(String(255))
     port = Column(Integer)
     database_name = Column(String(255))
     username = Column(String(255))
-    password_encrypted = Column(Text)  # AES encrypted
-    connection_string_encrypted = Column(Text)  # Full connection string encrypted
-    schema_json = Column(JSONB)  # Cached database schema
+    password_encrypted = Column(Text)
+    connection_string_encrypted = Column(Text)
+    schema_json = Column(JSONB)
     is_active = Column(Boolean, default=True)
     last_connected_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
-    # Relationships
+
     user = relationship("User", back_populates="database_connections")
     query_history = relationship("QueryHistory", back_populates="database_connection")
     query_cache = relationship("QueryCache", back_populates="database_connection") 

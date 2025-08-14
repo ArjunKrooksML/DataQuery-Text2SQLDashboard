@@ -19,8 +19,11 @@ class QueryHistory(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     database_connection_id = Column(UUID(as_uuid=True), ForeignKey("database_connections.id", ondelete="CASCADE"), nullable=False)
-    natural_language_query = Column(Text, nullable=False)
-    generated_sql_query = Column(Text, nullable=False)
+    query_type = Column(Enum(QueryType), nullable=False, default=QueryType.SQL)  # Added query type
+    natural_language_query = Column(Text, nullable=True)  # For LLM queries (original prompt)
+    generated_sql_query = Column(Text, nullable=True)  # Made nullable for LLM responses without SQL
+    llm_response = Column(Text, nullable=True)  # For storing LLM responses
+    confidence_score = Column(Integer, nullable=True)  # For LLM confidence (0-100)
     execution_time_ms = Column(Integer)
     row_count = Column(Integer)
     status = Column(String(20), default="success")  # success, error, timeout

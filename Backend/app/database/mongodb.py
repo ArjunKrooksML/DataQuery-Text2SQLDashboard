@@ -26,10 +26,10 @@ class MongoDBManager:
             
             # Test connection
             await self.client.admin.command('ping')
-            print("✅ Connected to MongoDB successfully")
+            print(" Connected to MongoDB successfully")
             
         except Exception as e:
-            print(f"❌ Failed to connect to MongoDB: {e}")
+            print(f"ERROR: Failed to connect to MongoDB: {e}")
             raise
     
     async def close(self):

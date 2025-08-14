@@ -2,7 +2,7 @@
 
 A FastAPI backend with PostgreSQL database and MCP (Model Context Protocol) integration for the DataWise dashboard.
 
-## 🚀 Features
+## Features
 
 - **FastAPI** with automatic API documentation
 - **PostgreSQL** database with SQLAlchemy ORM
@@ -13,7 +13,7 @@ A FastAPI backend with PostgreSQL database and MCP (Model Context Protocol) inte
 - **Database Schema Discovery** for AI context
 - **CORS Support** for frontend integration
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 Backend/
@@ -29,7 +29,7 @@ Backend/
 └── main.py                  # FastAPI application
 ```
 
-## 🛠️ Setup Instructions
+## Setup Instructions
 
 ### 1. Prerequisites
 
@@ -82,13 +82,13 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-## 📚 API Documentation
+## API Documentation
 
 Once running, visit:
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
-## 🔌 API Endpoints
+## API Endpoints
 
 ### Authentication
 - `POST /api/v1/auth/register` - Register new user
@@ -101,7 +101,7 @@ Once running, visit:
 - `GET /api/v1/queries/schema` - Get database schema
 - `GET /api/v1/queries/sample-data/{table_name}` - Get sample data
 
-## 🤖 MCP Integration
+## MCP Integration
 
 The backend implements Model Context Protocol (MCP) for AI-powered database interactions:
 
@@ -118,7 +118,7 @@ The backend implements Model Context Protocol (MCP) for AI-powered database inte
 4. AI generates SQL: `SELECT region, SUM(sales) FROM sales GROUP BY region`
 5. Returns both natural language response and generated SQL
 
-## 🔐 Security Features
+## Security Features
 
 - **JWT Authentication** with configurable expiration
 - **Password Hashing** using bcrypt
@@ -126,7 +126,7 @@ The backend implements Model Context Protocol (MCP) for AI-powered database inte
 - **Input Validation** with Pydantic schemas
 - **SQL Injection Protection** via SQLAlchemy
 
-## 📊 Database Models
+## Database Models
 
 ### Users
 - User authentication and management
@@ -142,7 +142,7 @@ The backend implements Model Context Protocol (MCP) for AI-powered database inte
 - Sample data for AI context
 - Schema versioning and updates
 
-## 🚀 Deployment
+## Deployment
 
 ### Docker (Recommended)
 
@@ -167,7 +167,7 @@ OPENAI_API_KEY=your-production-key
 SECRET_KEY=your-secure-secret-key
 ```
 
-## 🔧 Development
+## Development
 
 ### Running Tests
 
@@ -203,7 +203,7 @@ black app/
 isort app/
 ```
 
-## 🤝 Integration with Frontend
+## Integration with Frontend
 
 The backend is designed to work seamlessly with the Next.js frontend:
 
@@ -212,14 +212,14 @@ The backend is designed to work seamlessly with the Next.js frontend:
 3. **Real-time Updates**: WebSocket support (planned)
 4. **Error Handling**: Consistent error responses
 
-## 📈 Monitoring & Logging
+## Monitoring & Logging
 
 - **Query Performance**: Track execution times
 - **Error Logging**: Comprehensive error tracking
 - **User Activity**: Audit trails for queries
 - **Health Checks**: `/health` endpoint for monitoring
 
-## 🔮 Future Enhancements
+## Future Enhancements
 
 - [ ] WebSocket support for real-time updates
 - [ ] Redis caching for improved performance

@@ -168,6 +168,20 @@ class ApiClient {
     });
   }
 
+  // Delete All Query History
+  async deleteQueryHistory(): Promise<{ message: string; deleted_count: number }> {
+    return this.request<{ message: string; deleted_count: number }>('/queries/logs', {
+      method: 'DELETE',
+    });
+  }
+
+  // Delete Single Query Log
+  async deleteSingleQueryLog(logId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/queries/logs/${logId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Get Database Schema
   async getDatabaseSchema(connectionId: string): Promise<any[]> {
     return this.request<any[]>(`/queries/schema?connection_id=${connectionId}`, {

@@ -20,13 +20,13 @@ class QueryResponse(BaseModel):
 
 
 class QueryLogResponse(BaseModel):
-    id: int
-    query_type: QueryType
+    id: str
+    query_type: str
     query_text: str
     status: str
     execution_time_ms: Optional[int]
     created_at: datetime
-    user_id: Optional[int] = None
+    user_id: Optional[str] = None
     
     class Config:
         from_attributes = True
